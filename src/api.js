@@ -184,6 +184,121 @@ export async function fetchCategoryCounts(credentials, settings) {
   }, {});
 }
 
+const CATEGORY_ACTIONS_BY_KIND = {
+  live: ['get_live_categories', 'get_live_streams'],
+  vod: ['get_vod_categories', 'get_vod_streams'],
+  series: ['get_series_categories', 'get_series'],
+};
+
+export function itemId(kind, item) {
+  const value = kind === 'series' ? item.series_id ?? item.id : item.stream_id ?? item.id;
+  return value === undefined || value === null ? '' : String(value);
+}
+
+export function itemName(item) {
+  return String(item.name || item.title || 'Sans nom').trim() || 'Sans nom';
+}
+
+export async function fetchCategories(credentials, kind, settings) {
+  const action = CATEGORY_ACTIONS_BY_KIND[kind][0];
+  const data = await requestJson(buildApiUrl(credentials, { action }), settings);
+  if (!Array.isArray(data)) {
+    throw new ApiError('categories', 'Le serveur ne renvoie pas de catégories.');
+  }
+  return data
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => ({
+      id: String(item.category_id ?? item.id ?? ''),
+      name: String(item.category_name ?? item.name ?? 'Sans nom').trim() || 'Sans nom',
+    }))
+    .filter((item) => item.id);
+}
+
+export async function fetchCategoryItems(credentials, kind, categoryId, settings) {
+  const action = CATEGORY_ACTIONS_BY_KIND[kind][1];
+  const data = await requestJson(
+    buildApiUrl(credentials, { action, category_id: String(categoryId) }),
+    settings,
+  );
+  if (!Array.isArray(data)) {
+    throw new ApiError('items', 'Le serveur ne renvoie pas d’éléments.');
+  }
+  return data
+    .filter((item) => item && typeof item === 'object')
+    .map((item) => ({ id: itemId(kind, item), name: itemName(item), raw: item }))
+    .filter((item) => item.id);
+}
+
+export async function fetchSeriesEpisodes(credentials, seriesId, settings) {
+  const data = await requestJson(
+    buildApiUrl(credentials, { action: 'get_series_info', series_id: String(seriesId) }),
+    settings,
+  );
+  const episodes = data && data.episodes;
+  const flat = [];
+  if (Array.isArray(episodes)) {
+    episodes.forEach((episode) => {
+      if (episode && typeof episode === 'object' && episode.id !== undefined) flat.push(episode);
+    });
+  } else if (episodes && typeof episodes === 'object') {
+    Object.keys(episodes).forEach((season) => {
+      const list = episodes[season];
+      if (!Array.isArray(list)) return;
+      list.forEach((episode) => {
+        if (episode && typeof episode === 'object' && episode.id !== undefined) {
+          flat.push({ ...episode, season });
+        }
+      });
+    });
+  }
+  return flat;
+}
+
+export function itemStreamUrl(credentials, kind, item) {
+  const id = itemId(kind, item);
+  if (!id) return '';
+  const extension = item.container_extension || (kind === 'live' ? 'ts' : 'mp4');
+  const path = kind === 'live' ? 'live' : 'movie';
+  return (
+    `${credentials.host}/${path}/` +
+    `${encodeURIComponent(credentials.username)}/` +
+    `${encodeURIComponent(credentials.password)}/` +
+    `${encodeURIComponent(id)}.${encodeURIComponent(extension)}`
+  );
+}
+
+export async function testAccountItem(credentials, kind, item, settings) {
+  try {
+    let url;
+    if (kind === 'series') {
+      const episodes = await fetchSeriesEpisodes(credentials, itemId(kind, item), settings);
+      if (!episodes.length) return { ok: false, detail: 'Aucun épisode', url: '' };
+      const episode = episodes[0];
+      const extension = episode.container_extension || 'mp4';
+      url =
+        `${credentials.host}/series/` +
+        `${encodeURIComponent(credentials.username)}/` +
+        `${encodeURIComponent(credentials.password)}/` +
+        `${encodeURIComponent(String(episode.id))}.${encodeURIComponent(extension)}`;
+      const outcome = await testStream(url, settings);
+      const season = Number(episode.season) || 0;
+      const number = Number(episode.episode_num) || 0;
+      return {
+        ...outcome,
+        url,
+        detail: outcome.ok ? `S${String(season).padStart(2, '0')}E${String(number).padStart(2, '0')} · ${outcome.detail}` : outcome.detail,
+      };
+    }
+
+    url = itemStreamUrl(credentials, kind, item);
+    if (!url) return { ok: false, detail: 'URL indisponible', url: '' };
+    const outcome = await testStream(url, settings);
+    return { ...outcome, url };
+  } catch (error) {
+    return { ok: false, detail: error.message || 'Erreur', url: '' };
+  }
+}
+
 export async function testStream(url, settings) {
   const value = String(url || '').trim();
   if (!value) return { ok: false, detail: 'URL vide' };

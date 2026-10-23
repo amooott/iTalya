@@ -13,6 +13,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { checkUrl, fetchCategoryCounts, parseM3U } from '../api';
+import { exportXlsx } from '../excel';
 import {
   Badge,
   Button,
@@ -267,6 +268,37 @@ export default function BulkScreen({ settings, onRecord, onAccounts }) {
     }
   };
 
+  const exporterExcel = async () => {
+    if (!results.length) {
+      Alert.alert('Aucun résultat', 'Lance une vérification avant d’exporter.');
+      return;
+    }
+    const header = [
+      'URL', 'Serveur', 'Identifiant', 'Statut', 'Expiration',
+      'Connexions max', 'Connexions actives', 'Essai', 'Formats', 'Erreur',
+    ];
+    const data = results.map((item) => {
+      const info = item.info || {};
+      return [
+        item.url,
+        item.host || '',
+        item.username || '',
+        item.kind === 'active' ? 'Actif' : item.kind === 'inactive' ? 'Inactif' : 'Erreur',
+        formatTimestamp(info.exp_date),
+        info.max_connections ?? '',
+        info.active_cons ?? '',
+        String(info.is_trial) === '1' ? 'Oui' : 'Non',
+        Array.isArray(info.allowed_output_formats) ? info.allowed_output_formats.join(', ') : '',
+        item.message || '',
+      ];
+    });
+    try {
+      await exportXlsx('comptes_xtream.xlsx', 'Comptes', header, data);
+    } catch (error) {
+      Alert.alert('Export Excel impossible', String(error.message || error));
+    }
+  };
+
   const exporterCsv = async () => {
     if (!results.length) {
       Alert.alert('Aucun résultat', 'Lance une vérification avant d’exporter.');
@@ -411,8 +443,9 @@ export default function BulkScreen({ settings, onRecord, onAccounts }) {
           />
 
           <View style={styles.exportRow}>
-            <Button title="Exporter TXT (actifs)" variant="secondary" onPress={exporterTxt} small style={{ flex: 1 }} />
-            <Button title="Exporter CSV" variant="secondary" onPress={exporterCsv} small style={{ flex: 1 }} />
+            <Button title="TXT" variant="secondary" onPress={exporterTxt} small style={{ flex: 1 }} />
+            <Button title="CSV" variant="secondary" onPress={exporterCsv} small style={{ flex: 1 }} />
+            <Button title="Excel" variant="secondary" onPress={exporterExcel} small style={{ flex: 1 }} />
           </View>
         </>
       ) : (

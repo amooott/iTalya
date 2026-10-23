@@ -114,9 +114,9 @@ export default function SettingsScreen({ settings, onSave }) {
         <SectionTitle title="À propos" />
         <Text style={styles.about}>
           iTalya · Inspecteur Xtream{'\n'}
-          Version 1.1.0 (build 2){'\n\n'}
-          Comptes Xtream Codes et Stalker/Ministra, lots TXT/M3U, catégories,
-          test de flux, portails, nettoyeur, doublons, MAC et registre des comptes.
+          Version 1.2.0 (build 3){'\n\n'}
+          Comptes Xtream Codes et Stalker/Ministra, scan des catégories, test de flux,
+          lots TXT/M3U, portails, nettoyeur, doublons, MAC, exports Excel et registre.
         </Text>
         <Text style={styles.disclaimer}>
           Outil de diagnostic. Utilise-le uniquement sur les comptes et serveurs dont tu as

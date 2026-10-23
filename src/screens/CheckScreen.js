@@ -17,6 +17,7 @@ import {
   testStream,
 } from '../api';
 import { Badge, Button, Card, Field, KeyValue, SectionTitle, Stat, StatusDot } from '../components';
+import CategoryBrowser from './CategoryBrowser';
 import { colors, font, radius, spacing } from '../theme';
 import {
   daysRemaining,
@@ -268,6 +269,12 @@ export default function CheckScreen({ settings, onRecord, onAccounts }) {
               <Button title="Réinitialiser" variant="secondary" onPress={reset} small />
             </View>
           </Card>
+        ) : null}
+
+        {result && active ? (
+          <View style={{ marginTop: spacing.lg }}>
+            <CategoryBrowser credentials={result.credentials} settings={settings} />
+          </View>
         ) : null}
 
         {result && active ? (
