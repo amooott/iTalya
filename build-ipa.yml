@@ -1,4 +1,4 @@
-name: iTalya
+name: Build IPA non signé
 
 on:
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
         working-directory: ios
         run: |
           xcodebuild -workspace *.xcworkspace \
-            -scheme MonApp \
+            -scheme iTalya \
             -configuration Release \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
@@ -42,10 +42,10 @@ jobs:
         run: |
           mkdir Payload
           cp -r *.app Payload/
-          zip -r MonApp.ipa Payload
+          zip -r iTalya.ipa Payload
 
       - name: Télécharger l'IPA
         uses: actions/upload-artifact@v4
         with:
-          name: MonApp-ipa
-          path: ios/build/Build/Products/Release-iphoneos/MonApp.ipa
+          name: iTalya-ipa
+          path: ios/build/Build/Products/Release-iphoneos/iTalya.ipa
