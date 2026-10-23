@@ -18,12 +18,12 @@ pipeline GitHub Actions qui compile l'IPA **sans avoir besoin d'un Mac**.
 | Plateforme | iOS 15.1 et plus, arm64 |
 | Écran | Portrait, clair |
 | Stockage | Tâches enregistrées sur l'appareil (AsyncStorage) |
-| IPA fourni | `../iTalya.ipa` (4,77 Mo, non signé) |
+| IPA fourni | `../iTalya.ipa` (5,42 Mo, non signé) |
 
-L'IPA fourni à la racine du dossier de travail correspond au build publié du
-dépôt [amooott/iTalya](https://github.com/amooott/iTalya). Le projet de ce
-dossier est une version améliorée (interface, persistance, filtres) qu'il faut
-recompiler pour obtenir un nouvel IPA.
+L'IPA fourni à la racine du dossier de travail a été compilé par le workflow de
+ce dossier (run GitHub Actions `40001568961`, le 23 octobre 2026). C'est la
+version retravaillée : nouvelle interface, filtres et sauvegarde locale.
+L'ancien build du dépôt est conservé sous `../iTalya-original.ipa`.
 
 ---
 
@@ -157,12 +157,14 @@ Fonctionnalités de l'application :
 - Bundle JavaScript iOS compilé avec Metro : **559 modules**, 984 ko, sans
   erreur (commande `npm run export:ios`).
 - `app.json` validé par Expo.
-- IPA existant contrôlé : archive ZIP valide, `Payload/iTalya.app`, binaire
+- Workflow GitHub Actions exécuté avec succès : prébuild, CocoaPods,
+  `xcodebuild` Release et empaquetage de l'IPA.
+- IPA produit contrôlé : archive ZIP valide, `Payload/iTalya.app`, binaire
   Mach-O **arm64**, `Info.plist` (iOS 15.1 minimum), `main.jsbundle` Hermes
-  0.12.0 (bytecode HBC 96), absence de signature et de profil de
-  provisionnement.
-- SHA-256 de l'IPA fourni :
-  `b5b94e849d27602bfc6b9f512b0f6f7d32e48ce891ba9bd3fadca527e76b8d50`.
+  0.12.0 (bytecode HBC 96), module natif `RNCAsyncStorage` présent, absence de
+  signature et de profil de provisionnement.
+- Taille de l'IPA : 5 422 897 octets. SHA-256 :
+  `1bcc8a0452fd8f331fd48a0ae0246e16992314d0d43d8de00f890de7dc624ec6`.
 
 ---
 
