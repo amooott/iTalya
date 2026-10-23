@@ -1,0 +1,100 @@
+name: Build iOS IPA
+
+# Construit une application iOS non signée (.ipa) sur un runner macOS GitHub.
+# Aucun Mac n'est nécessaire : le fichier est ensuite à récupérer dans
+# l'onglet « Actions » du dépôt (artefact « iTalya-ipa »).
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPO_NO_TELEMETRY: '1'
+  CI: '1'
+
+jobs:
+  build:
+    name: Compiler l'IPA
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Afficher les versions
+        run: |
+          node --version
+          npm --version
+          xcodebuild -version
+          pod --version
+
+      - name: Installer les dépendances JavaScript
+        run: npm install --no-audit --no-fund
+
+      - name: Générer le projet Xcode (Expo prebuild)
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Installer les pods CocoaPods
+        working-directory: ios
+        run: pod install
+
+      - name: Compiler l'application sans signature
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace iTalya.xcworkspace \
+            -scheme iTalya \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build 2>&1 | tee build.log
+
+      - name: Empaqueter l'IPA
+        working-directory: ios/build/Build/Products/Release-iphoneos
+        run: |
+          rm -rf Payload iTalya.ipa
+          mkdir -p Payload
+          cp -R iTalya.app Payload/
+          zip -qry iTalya.ipa Payload
+          shasum -a 256 iTalya.ipa | tee iTalya.ipa.sha256
+          du -h iTalya.ipa
+
+      - name: Publier l'artefact IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: iTalya-ipa
+          path: |
+            ios/build/Build/Products/Release-iphoneos/iTalya.ipa
+            ios/build/Build/Products/Release-iphoneos/iTalya.ipa.sha256
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publier le journal en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-de-compilation
+          path: ios/build.log
+          if-no-files-found: ignore
+          retention-days: 14
