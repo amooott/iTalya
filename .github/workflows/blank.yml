@@ -9,6 +9,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Vérifier les fichiers du projet
+        run: |
+          for f in package.json app.json App.js; do
+            if [ ! -f "$f" ]; then
+              echo "Fichier manquant à la racine : $f"
+              exit 1
+            fi
+          done
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -23,10 +32,11 @@ jobs:
         working-directory: ios
         run: pod install
 
-      - name: Compiler l'app sans signature
+      - name: Compiler sans signature
         working-directory: ios
         run: |
-          xcodebuild -workspace *.xcworkspace \
+          xcodebuild \
+            -workspace iTalya.xcworkspace \
             -scheme iTalya \
             -configuration Release \
             -sdk iphoneos \
@@ -34,14 +44,13 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_ENTITLEMENTS="" \
             clean build
 
       - name: Créer le fichier IPA
         working-directory: ios/build/Build/Products/Release-iphoneos
         run: |
-          mkdir Payload
-          cp -r *.app Payload/
+          mkdir -p Payload
+          cp -r iTalya.app Payload/
           zip -r iTalya.ipa Payload
 
       - name: Télécharger l'IPA
@@ -49,3 +58,4 @@ jobs:
         with:
           name: iTalya-ipa
           path: ios/build/Build/Products/Release-iphoneos/iTalya.ipa
+          if-no-files-found: error
