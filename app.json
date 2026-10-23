@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "iTalya",
+    "slug": "italya",
+    "version": "1.0.0",
+    "platforms": ["ios"],
+    "ios": {
+      "bundleIdentifier": "com.amooott.italya"
+    }
+  }
+}
