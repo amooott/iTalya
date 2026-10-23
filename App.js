@@ -4,17 +4,20 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import CheckScreen from './src/screens/CheckScreen';
 import BulkScreen from './src/screens/BulkScreen';
+import StalkerScreen from './src/screens/StalkerScreen';
+import AccountsScreen from './src/screens/AccountsScreen';
 import ToolsScreen from './src/screens/ToolsScreen';
-import HistoryScreen from './src/screens/HistoryScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import { addHistory, loadSettings } from './src/storage';
+import { upsertAccounts } from './src/accounts';
 import { colors, font, radius, spacing } from './src/theme';
 
 const TABS = [
   { key: 'check', glyph: '⌕', label: 'Vérifier' },
   { key: 'bulk', glyph: '≡', label: 'Lot' },
+  { key: 'stalker', glyph: '▣', label: 'Stalker' },
+  { key: 'accounts', glyph: '▤', label: 'Comptes' },
   { key: 'tools', glyph: '✦', label: 'Outils' },
-  { key: 'history', glyph: '◷', label: 'Historique' },
   { key: 'settings', glyph: '⚙', label: 'Réglages' },
 ];
 
@@ -22,7 +25,7 @@ function Main() {
   const insets = useSafeAreaInsets();
   const [settings, setSettings] = useState(null);
   const [tab, setTab] = useState('check');
-  const [historyKey, setHistoryKey] = useState(0);
+  const [accountKey, setAccountKey] = useState(0);
 
   useEffect(() => {
     loadSettings().then(setSettings);
@@ -30,7 +33,12 @@ function Main() {
 
   const record = async (entry) => {
     await addHistory(entry);
-    setHistoryKey((value) => value + 1);
+  };
+
+  const rememberAccounts = async (records) => {
+    if (!records || !records.length) return;
+    await upsertAccounts(records);
+    setAccountKey((value) => value + 1);
   };
 
   if (!settings) {
@@ -57,22 +65,30 @@ function Main() {
           <Text style={styles.tagline}>Inspecteur Xtream</Text>
         </View>
         <View style={styles.versionPill}>
-          <Text style={styles.versionText}>v1.0</Text>
+          <Text style={styles.versionText}>v1.1</Text>
         </View>
       </View>
 
       <View style={styles.body}>
         <View style={[styles.pane, tab !== 'check' && styles.hidden]}>
-          <CheckScreen settings={settings} onRecord={record} />
+          <CheckScreen settings={settings} onRecord={record} onAccounts={rememberAccounts} />
         </View>
         <View style={[styles.pane, tab !== 'bulk' && styles.hidden]}>
-          <BulkScreen settings={settings} onRecord={record} activeTab={tab === 'bulk'} />
+          <BulkScreen settings={settings} onRecord={record} onAccounts={rememberAccounts} />
+        </View>
+        <View style={[styles.pane, tab !== 'stalker' && styles.hidden]}>
+          <StalkerScreen settings={settings} onAccounts={rememberAccounts} onRecord={record} />
+        </View>
+        <View style={[styles.pane, tab !== 'accounts' && styles.hidden]}>
+          <AccountsScreen
+            active={tab === 'accounts'}
+            refreshKey={accountKey}
+            settings={settings}
+            onChanged={() => setAccountKey((value) => value + 1)}
+          />
         </View>
         <View style={[styles.pane, tab !== 'tools' && styles.hidden]}>
           <ToolsScreen />
-        </View>
-        <View style={[styles.pane, tab !== 'history' && styles.hidden]}>
-          <HistoryScreen active={tab === 'history'} refreshKey={historyKey} />
         </View>
         <View style={[styles.pane, tab !== 'settings' && styles.hidden]}>
           <SettingsScreen settings={settings} onSave={setSettings} />
@@ -136,13 +152,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.accentSoft,
     borderWidth: 1,
-    borderColor: 'rgba(76,141,255,0.35)',
+    borderColor: 'rgba(245,158,11,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
   logoText: {
-    color: colors.accent,
+    color: '#F59E0B',
     fontSize: 16,
     fontWeight: '800',
     letterSpacing: -0.5,
@@ -228,13 +244,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     backgroundColor: colors.accentSoft,
     borderWidth: 1,
-    borderColor: 'rgba(76,141,255,0.35)',
+    borderColor: 'rgba(245,158,11,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
   },
   logoLargeText: {
-    color: colors.accent,
+    color: '#F59E0B',
     fontSize: 30,
     fontWeight: '800',
   },

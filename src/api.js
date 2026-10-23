@@ -230,6 +230,7 @@ export async function checkUrl(url, settings) {
       url,
       host: credentials.host,
       username: credentials.username,
+      password: credentials.password,
       info,
       duration: Date.now() - started,
     };

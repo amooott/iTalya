@@ -93,6 +93,10 @@ export default function ToolsScreen() {
   const [count, setCount] = useState('10');
   const [macs, setMacs] = useState([]);
 
+  // Doublons
+  const [dupeInput, setDupeInput] = useState('');
+  const [dupeResult, setDupeResult] = useState(null);
+
   const nettoyer = () => {
     setCleanError('');
     const lines = cleanInput.split(/\r?\n/).filter((line) => line.trim());
@@ -242,6 +246,47 @@ export default function ToolsScreen() {
     setPortalRunning(false);
   };
 
+  const analyserDoublons = () => {
+    const lines = dupeInput
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const seen = new Map();
+    let duplicates = 0;
+
+    for (const line of lines) {
+      let key = `t|${line.toLowerCase()}`;
+      const macMatch = line.match(/([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}/);
+      const urlMatch = line.match(/https?:\/\/[^\s]+/);
+
+      if (macMatch) {
+        const panel = line.replace(macMatch[0], '').trim().split(/\s+/)[0] || '';
+        const host = panel.replace(/^https?:\/\//i, '').split('/')[0].replace(/:(80|443)$/, '');
+        key = `s|${host.toLowerCase()}|${macMatch[0].toUpperCase()}`;
+      } else if (urlMatch) {
+        try {
+          const url = new URL(urlMatch[0]);
+          const host = url.host.replace(/:(80|443)$/, '').toLowerCase();
+          const userMatch = url.search.match(/[?&]username=([^&]*)/);
+          const user = userMatch ? decodeURIComponent(userMatch[1]).toLowerCase() : '';
+          key = user ? `x|${host}|${user}` : `p|${host}|${url.pathname}`;
+        } catch {
+          key = `t|${line.toLowerCase()}`;
+        }
+      }
+
+      if (seen.has(key)) duplicates += 1;
+      else seen.set(key, line);
+    }
+
+    setDupeResult({
+      total: lines.length,
+      unique: seen.size,
+      duplicates,
+      lines: Array.from(seen.values()),
+    });
+  };
+
   const genererMacs = () => {
     const cleanPattern = pattern.trim().toUpperCase();
     if (!/^([0-9A-F*]{2}:){5}[0-9A-F*]{2}$/.test(cleanPattern)) {
@@ -278,6 +323,7 @@ export default function ToolsScreen() {
           ['cleaner', 'Nettoyeur'],
           ['portal', 'Portail'],
           ['mac', 'MAC'],
+          ['dupes', 'Doublons'],
         ].map(([key, label]) => {
           const selected = tool === key;
           return (
@@ -426,8 +472,53 @@ export default function ToolsScreen() {
         </>
       ) : null}
 
+      {tool === 'dupes' ? (
+        <Card>
+          <SectionTitle
+            title="Doublons"
+            subtitle="Ignore les répétitions Xtream (serveur + identifiant) et Stalker (portail + MAC)."
+          />
+          <Field
+            label="Liste à analyser"
+            value={dupeInput}
+            onChangeText={(value) => { setDupeInput(value); setDupeResult(null); }}
+            placeholder={'Colle des URL M3U ou des lignes « portail MAC »…'}
+            multiline
+            numberOfLines={8}
+          />
+          <Button title="Analyser" onPress={analyserDoublons} disabled={!dupeInput.trim()} />
+          {dupeResult ? (
+            <View style={styles.resultBox}>
+              <Text style={styles.resultStats}>
+                {dupeResult.total} lignes · {dupeResult.unique} uniques · {dupeResult.duplicates} doublons
+              </Text>
+              <Text selectable style={styles.dupePreview}>
+                {dupeResult.lines.slice(0, 40).join('\n')}
+                {dupeResult.lines.length > 40 ? '\n…' : ''}
+              </Text>
+              <View style={styles.inlineButtons}>
+                <Button
+                  title="Partager"
+                  variant="secondary"
+                  small
+                  onPress={() => Share.share({ message: dupeResult.lines.join('\n') })}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Enregistrer .txt"
+                  variant="secondary"
+                  small
+                  onPress={() => shareText('sans_doublons.txt', `${dupeResult.lines.join('\n')}\n`, 'text/plain', 'public.plain-text')}
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </View>
+          ) : null}
+        </Card>
+      ) : null}
+
       <Text style={styles.footnote}>
-        Outils repris de l’Inspecteur Xtream : nettoyage de listes, vérification de portails et génération de MAC.
+        Outils repris de l’Inspecteur Xtream : nettoyage de listes, portails, MAC et doublons.
       </Text>
     </ScrollView>
   );
@@ -528,6 +619,15 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     fontSize: 13,
     lineHeight: 20,
+  },
+  dupePreview: {
+    color: colors.muted,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 11,
+    lineHeight: 17,
+    backgroundColor: colors.bgSoft,
+    borderRadius: radius.sm,
+    padding: spacing.md,
   },
   footnote: {
     color: colors.faint,
