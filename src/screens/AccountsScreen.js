@@ -23,6 +23,7 @@ import {
 } from '../components';
 import { checkAccount } from '../api';
 import { checkStalker } from '../stalker';
+import { exportXlsx } from '../excel';
 import {
   deleteAccounts,
   loadAccounts,
@@ -212,6 +213,26 @@ export default function AccountsScreen({ active, refreshKey, settings, onChanged
     }
   };
 
+  const exporterExcel = async () => {
+    if (!filtered.length) return;
+    const header = ['Type', 'Serveur', 'Identifiant', 'MAC', 'Étiquette', 'Statut', 'Expiration', 'Dernière vérification'];
+    const data = filtered.map((item) => [
+      item.type === 'stalker' ? 'Stalker' : 'Xtream',
+      item.server,
+      item.username || '',
+      item.mac || '',
+      item.label || '',
+      statusLabel(item.status),
+      item.type === 'stalker' ? item.expiresAt || '' : formatTimestamp(item.expiresAt),
+      formatDateTime(item.lastCheck),
+    ]);
+    try {
+      await exportXlsx('mes_comptes.xlsx', 'Comptes', header, data);
+    } catch (error) {
+      Alert.alert('Export Excel impossible', String(error.message || error));
+    }
+  };
+
   const viderHistorique = () => {
     Alert.alert('Vider l’historique ?', 'Les résumés enregistrés seront supprimés.', [
       { text: 'Annuler', style: 'cancel' },
@@ -267,7 +288,8 @@ export default function AccountsScreen({ active, refreshKey, settings, onChanged
               })}
             </View>
             <View style={styles.actions}>
-              <Button title="Exporter CSV" variant="secondary" small onPress={exporter} style={{ flex: 1 }} />
+              <Button title="CSV" variant="secondary" small onPress={exporter} style={{ flex: 1 }} />
+              <Button title="Excel" variant="secondary" small onPress={exporterExcel} style={{ flex: 1 }} />
               <Button title="Doublons" variant="secondary" small onPress={doublons} style={{ flex: 1 }} />
             </View>
           </Card>

@@ -8,7 +8,7 @@ des comptes.
 Logo : écran ambre sur carré arrondi ardoise (`assets/icon.png`).
 
 Application **Expo SDK 52 / React Native 0.76**, compilée en `.ipa` par GitHub
-Actions (aucun Mac requis). Version 1.1.0.
+Actions (aucun Mac requis). Version 1.2.0.
 
 ---
 
@@ -18,21 +18,26 @@ Actions (aucun Mac requis). Version 1.1.0.
 - URL M3U complète ou serveur + identifiant + mot de passe ;
 - statut, expiration et jours restants, connexions max/actives, essai, formats ;
 - nombre de catégories **Chaînes / Films / Séries** ;
+- **scan des catégories** : choix du type, liste des catégories puis des éléments,
+  test individuel ou par lot (1, 5, 10, 25, 50, 100 ou Tous), progression et
+  partage du rapport ;
 - test d’une URL de flux (lecture des premiers octets).
 
 ### Stalker / Ministra
 - portail MAG + adresse MAC, portails récents mémorisés (50) ;
 - poignée de main `portal.php`, profil, expiration, chaînes ;
 - catégories Live / VOD / Séries ;
+- **test des flux** : catégories, éléments via `get_ordered_list`, lien
+  `create_link`, lecture des premiers octets ;
 - mode **Liste** : une ligne par compte (`portail MAC` ou MAC seul), vérification
-  parallèle, export CSV ;
+  parallèle, exports CSV et Excel ;
 - en-tête client `MAG250`, cookies `mac=…`, `X-User-Agent`.
 
 ### Lot (TXT / M3U)
 - collage ou import `.txt`, extraction des URL `get.php?username=…` ;
 - dédoublonnage, vérification parallèle avec progression ;
 - filtres Tous / Actifs / Inactifs / Erreurs, recherche ;
-- export **TXT** (actifs) et **CSV** (tous).
+- export **TXT** (actifs), **CSV** et **Excel** (tous).
 
 ### Mes comptes
 - registre local de tous les comptes vérifiés (Xtream et Stalker) ;
@@ -106,11 +111,14 @@ L’IPA produit est **non signé** : iOS refuse de l’installer tel quel.
 │   ├── stalker.js               # Stalker/Ministra : handshake, profil, catégories
 │   ├── accounts.js              # registre des comptes + portails mémorisés
 │   ├── storage.js               # réglages + historique
+│   ├── excel.js                 # export .xlsx (SheetJS)
 │   ├── theme.js / utils.js / components.js
 │   └── screens/
 │       ├── CheckScreen.js       # compte Xtream
+│       ├── CategoryBrowser.js   # scan des catégories Xtream
 │       ├── BulkScreen.js        # lots TXT / M3U
 │       ├── StalkerScreen.js     # compte + liste Stalker
+│       ├── StalkerBrowser.js    # catégories + flux Stalker (create_link)
 │       ├── AccountsScreen.js    # mes comptes + historique
 │       ├── ToolsScreen.js       # nettoyeur, portail, MAC, doublons
 │       └── SettingsScreen.js
@@ -124,16 +132,16 @@ L’IPA produit est **non signé** : iOS refuse de l’installer tel quel.
 ## 5. Différences avec la version bureau
 
 Portés : validation d’URL, `player_api.php`, statuts, expiration, connexions,
-catégories, extraction M3U, Stalker (handshake/profil/catégories), portails,
-nettoyeur, doublons, MAC, registre et historique.
+catégories, **scan des catégories et test par lot**, extraction M3U, Stalker
+(handshake, profil, catégories, `get_ordered_list`, `create_link`), portails,
+nettoyeur, doublons, MAC, registre, historique, exports **CSV/Excel**.
 
-Pas encore portés : scan exhaustif d’une catégorie (chaque chaîne, film, série),
-test de flux Stalker via `create_link`, exports Excel natifs, copie Telegram,
-planification quotidienne, les 75 réglages, les traductions multiples et les
-thèmes clair/sombre.
+Pas encore portés : copie Telegram (nécessite un client MTProto), planification
+quotidienne (iOS limite l’exécution en arrière-plan), traductions multiples et
+thèmes clair/sombre. Les 75 réglages sont ramenés aux options utiles sur mobile.
 
-Les exports passent par la feuille de partage iOS (TXT/CSV), pas par un dossier
-`résultats`.
+Les exports passent par la feuille de partage iOS (TXT/CSV/XLSX), pas par un
+dossier `résultats`.
 
 ## 6. Notes techniques
 

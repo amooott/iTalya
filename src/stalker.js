@@ -234,13 +234,16 @@ export async function checkStalker(panelInput, macInput, settings) {
           15,
         );
         const list = JSON.parse(body).js;
-        const titles = Array.isArray(list)
+        const entries = Array.isArray(list)
           ? list
               .filter((item) => item && typeof item === 'object')
-              .map((item) => String(item.title || item.name || '').trim())
-              .filter(Boolean)
+              .map((item) => ({
+                id: String(item.id ?? ''),
+                title: String(item.title || item.name || '').trim(),
+              }))
+              .filter((item) => item.id && item.title && item.id !== '*' && item.id !== '0')
           : [];
-        categories[key] = { count: titles.length, titles: titles.slice(0, 40) };
+        categories[key] = { count: entries.length, cats: entries.slice(0, 300) };
       } catch {
         categories[key] = { count: null, titles: [] };
       }
@@ -268,6 +271,59 @@ export async function checkStalker(panelInput, macInput, settings) {
       message: known ? error.message : 'Erreur inattendue',
       duration: Date.now() - started,
     };
+  }
+}
+
+const TYPE_OF_KIND = { live: 'itv', vod: 'vod', series: 'series' };
+
+export async function fetchStalkerItems(panel, mac, token, kind, categoryId, settings) {
+  const { address, host } = normalizePanel(panel);
+  const base = `http://${address}/portal.php`;
+  const type = TYPE_OF_KIND[kind] || 'itv';
+  const param = kind === 'live' ? 'genre' : 'category';
+  const url =
+    `${base}?type=${type}&action=get_ordered_list&${param}=` +
+    `${encodeURIComponent(categoryId)}&p=1&JsHttpRequest=1-xml`;
+  const body = await stalkerGet(url, host, normalizeMac(mac), token, settings, 15);
+  const js = JSON.parse(body).js;
+  const data = js && typeof js === 'object' && js.data ? js.data : js;
+  if (!Array.isArray(data)) return [];
+  return data
+    .filter((item) => item && typeof item === 'object' && item.cmd)
+    .map((item) => ({
+      id: String(item.id ?? item.cmd),
+      name: String(item.name || '?').trim() || '?',
+      cmd: String(item.cmd || ''),
+    }));
+}
+
+export async function createStalkerLink(panel, mac, token, kind, cmd, settings) {
+  const { address, host } = normalizePanel(panel);
+  const base = `http://${address}/portal.php`;
+  const type = TYPE_OF_KIND[kind] || 'itv';
+  const url =
+    `${base}?type=${type}&action=create_link&cmd=${encodeURIComponent(cmd)}` +
+    '&series=&forced_storage=&disable_ad=0&download=0&JsHttpRequest=1-xml';
+  const body = await stalkerGet(url, host, normalizeMac(mac), token, settings, 15);
+  const js = JSON.parse(body).js;
+  const link = typeof js === 'string' ? js : js && js.cmd;
+  return String(link || '')
+    .replace(/ffmpeg/gi, '')
+    .replace(/\\/g, '')
+    .trim();
+}
+
+export async function testStalkerItem(panel, mac, token, kind, item, settings) {
+  try {
+    const link = await createStalkerLink(panel, mac, token, kind, item.cmd, settings);
+    if (!link || !/^https?:\/\//i.test(link)) {
+      return { ok: false, detail: 'Lien indisponible', url: '' };
+    }
+    const { host } = normalizePanel(panel);
+    const outcome = await testStalkerStream(link, host, normalizeMac(mac), settings);
+    return { ...outcome, url: link };
+  } catch (error) {
+    return { ok: false, detail: error.message || 'Erreur', url: '' };
   }
 }
 

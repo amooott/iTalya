@@ -27,6 +27,8 @@ import {
 } from '../components';
 import { checkStalker, normalizePanel } from '../stalker';
 import { loadPortals, rememberPortal } from '../accounts';
+import { exportXlsx } from '../excel';
+import StalkerBrowser from './StalkerBrowser';
 import { colors, font, radius, spacing } from '../theme';
 
 const TONE = { active: 'success', inactive: 'warning', error: 'danger' };
@@ -232,6 +234,28 @@ export default function StalkerScreen({ settings, onAccounts, onRecord }) {
     }
   };
 
+  const exporterExcel = async () => {
+    if (!rows.length) return;
+    const header = ['Portail', 'MAC', 'Statut', 'Expiration', 'Jours', 'Chaînes', 'Live', 'VOD', 'Séries', 'Erreur'];
+    const data = rows.map((item) => [
+      item.panel,
+      item.mac,
+      LABEL[item.kind],
+      item.expiresRaw || '',
+      item.unlimited ? 'Illimité' : item.daysLeft ?? '',
+      item.channels ?? '',
+      item.categories?.live?.count ?? '',
+      item.categories?.vod?.count ?? '',
+      item.categories?.series?.count ?? '',
+      item.message || '',
+    ]);
+    try {
+      await exportXlsx('comptes_stalker.xlsx', 'Stalker', header, data);
+    } catch (exc) {
+      Alert.alert('Export Excel impossible', String(exc.message || exc));
+    }
+  };
+
   const exporter = async () => {
     if (!rows.length) return;
     const header = ['Portail', 'MAC', 'Statut', 'Expiration', 'Jours', 'Chaînes', 'Live', 'VOD', 'Séries', 'Erreur'];
@@ -318,6 +342,9 @@ export default function StalkerScreen({ settings, onAccounts, onRecord }) {
               </View>
             </Card>
           ) : null}
+          {result && result.kind !== 'error' ? (
+            <StalkerBrowser result={result} settings={settings} />
+          ) : null}
         </>
       ) : (
         <Card>
@@ -333,8 +360,9 @@ export default function StalkerScreen({ settings, onAccounts, onRecord }) {
             editable={!running}
           />
           <View style={styles.inlineButtons}>
-            <Button title="Importer .txt" variant="secondary" small onPress={importer} disabled={running} style={{ flex: 1 }} />
-            <Button title="Exporter CSV" variant="secondary" small onPress={exporter} disabled={!rows.length} style={{ flex: 1 }} />
+            <Button title="Importer" variant="secondary" small onPress={importer} disabled={running} style={{ flex: 1 }} />
+            <Button title="CSV" variant="secondary" small onPress={exporter} disabled={!rows.length} style={{ flex: 1 }} />
+            <Button title="Excel" variant="secondary" small onPress={exporterExcel} disabled={!rows.length} style={{ flex: 1 }} />
           </View>
           <Button
             title={running ? `Vérification ${done}/${total}…` : 'Vérifier la liste'}
