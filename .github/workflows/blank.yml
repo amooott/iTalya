@@ -28,10 +28,16 @@ jobs:
       - name: Installer les dépendances
         run: npm install
 
+      - name: Installer expo-asset si absent
+        run: |
+          if [ ! -d node_modules/expo-asset ]; then
+            echo "expo-asset absent, installation forcée"
+            npm install expo-asset@~11.0.1 --no-save
+          fi
+
       - name: Vérifier expo et expo-asset
         run: |
           node -p "'expo ' + require('expo/package.json').version"
-          ls -d node_modules/expo-asset
           node -p "'expo-asset ' + require('expo-asset/package.json').version"
 
       - name: Générer le projet iOS
