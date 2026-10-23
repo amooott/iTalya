@@ -111,7 +111,7 @@ function ResultRow({ item, onPress }) {
   );
 }
 
-export default function BulkScreen({ settings, onRecord, activeTab }) {
+export default function BulkScreen({ settings, onRecord, onAccounts }) {
   const [text, setText] = useState('');
   const [stats, setStats] = useState(null);
   const [results, setResults] = useState([]);
@@ -233,6 +233,20 @@ export default function BulkScreen({ settings, onRecord, activeTab }) {
       inactive: summary.inactive || 0,
       errors: summary.error || 0,
     });
+
+    onAccounts(
+      collected
+        .filter((item) => item.kind !== 'error')
+        .map((item) => ({
+          type: 'xtream',
+          server: item.host,
+          username: item.username,
+          password: item.password || '',
+          status: item.kind === 'active' ? 'active' : 'expired',
+          expiresAt: (item.info && item.info.exp_date) || '',
+          lastCheck: new Date().toISOString(),
+        })),
+    );
   };
 
   const arreter = () => {

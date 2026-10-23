@@ -49,7 +49,7 @@ function Segmented({ mode, onChange }) {
   );
 }
 
-export default function CheckScreen({ settings, onRecord }) {
+export default function CheckScreen({ settings, onRecord, onAccounts }) {
   const [mode, setMode] = useState('url');
   const [url, setUrl] = useState('');
   const [host, setHost] = useState('');
@@ -113,6 +113,18 @@ export default function CheckScreen({ settings, onRecord }) {
         inactive: active ? 0 : 1,
         errors: 0,
       });
+
+      onAccounts([
+        {
+          type: 'xtream',
+          server: credentials.host,
+          username: credentials.username,
+          password: credentials.password,
+          status: active ? 'active' : 'expired',
+          expiresAt: info.exp_date || '',
+          lastCheck: new Date().toISOString(),
+        },
+      ]);
 
       if (active) {
         fetchCategoryCounts(credentials, settings)

@@ -1,42 +1,57 @@
-# iTalya — Inspecteur Xtream (iOS)
+# iTalya — Inspecteur Xtream (Talya)
 
 Portage iPhone de l’**Inspecteur Xtream** (`main.py` / `xtream_inspector`) :
-vérification de comptes Xtream Codes, lots TXT/M3U, catégories, test de flux,
-portails, nettoyeur de listes et générateur de MAC.
+comptes **Xtream Codes** et **Stalker/Ministra**, lots TXT/M3U, catégories,
+test de flux, portails, nettoyeur, doublons, générateur de MAC et registre
+des comptes.
+
+Logo : écran ambre sur carré arrondi ardoise (`assets/icon.png`).
 
 Application **Expo SDK 52 / React Native 0.76**, compilée en `.ipa` par GitHub
-Actions (aucun Mac requis).
+Actions (aucun Mac requis). Version 1.1.0.
 
 ---
 
 ## 1. Fonctionnalités
 
-### Vérifier
+### Vérifier (Xtream)
 - URL M3U complète ou serveur + identifiant + mot de passe ;
-- statut du compte (`Active`, `Expired`, `Banned`…), expiration et jours restants ;
-- connexions maximum / actives, essai, formats autorisés ;
+- statut, expiration et jours restants, connexions max/actives, essai, formats ;
 - nombre de catégories **Chaînes / Films / Séries** ;
 - test d’une URL de flux (lecture des premiers octets).
 
+### Stalker / Ministra
+- portail MAG + adresse MAC, portails récents mémorisés (50) ;
+- poignée de main `portal.php`, profil, expiration, chaînes ;
+- catégories Live / VOD / Séries ;
+- mode **Liste** : une ligne par compte (`portail MAC` ou MAC seul), vérification
+  parallèle, export CSV ;
+- en-tête client `MAG250`, cookies `mac=…`, `X-User-Agent`.
+
 ### Lot (TXT / M3U)
-- collage direct ou import d’un fichier `.txt` ;
-- extraction des URL `get.php?username=…`, dédoublonnage ;
-- vérification avec parallélisme réglable et barre de progression ;
+- collage ou import `.txt`, extraction des URL `get.php?username=…` ;
+- dédoublonnage, vérification parallèle avec progression ;
 - filtres Tous / Actifs / Inactifs / Erreurs, recherche ;
-- détail d’un compte + catégories à la demande ;
-- export **TXT** (URL actives) et **CSV** (tous les résultats) via la feuille de
-  partage iOS.
+- export **TXT** (actifs) et **CSV** (tous).
+
+### Mes comptes
+- registre local de tous les comptes vérifiés (Xtream et Stalker) ;
+- recherche, filtre par type, étiquette libre (60 caractères) ;
+- revérification, suppression, **suppression des doublons** (le plus récent est
+  conservé) ;
+- export CSV ; onglet **Historique** (30 dernières vérifications).
 
 ### Outils
-- **Nettoyeur** : modes M3U, portail et expression régulière, exclusion,
-  dédoublonnage, export `.txt` ;
-- **Portail** : résolution DNS, test HTTP `/c/`, géolocalisation ipinfo.io ;
-- **MAC** : modèle `00:1A:79:**:**:**`, génération unique, export `.txt`.
+- **Nettoyeur** : M3U, portail, expression régulière, exclusion, export `.txt` ;
+- **Portail** : DNS, test HTTP `/c/`, géolocalisation ipinfo.io ;
+- **MAC** : modèle `00:1A:79:**:**:**`, génération unique, export `.txt` ;
+- **Doublons** : détection Xtream (serveur + identifiant) et Stalker
+  (portail + MAC), liste nettoyée partageable.
 
-### Historique et réglages
-- 30 dernières vérifications stockées localement ;
-- timeouts, parallélisme, alerte d’expiration, User-Agent ;
-- aucune donnée envoyée ailleurs qu’aux serveurs interrogés.
+### Réglages
+- timeouts, parallélisme (1–10), alerte d’expiration, User-Agent ;
+- stockage local uniquement (AsyncStorage), aucune donnée envoyée ailleurs
+  qu’aux serveurs interrogés.
 
 ---
 
@@ -48,12 +63,8 @@ Actions (aucun Mac requis).
 2. **Actions → Build iOS IPA → Run workflow**.
 3. Télécharger l’artefact **`iTalya-ipa`** (~15 min) : `iTalya.ipa` + SHA-256.
 
-Le workflow :
-
-- `npm install`, `expo prebuild`, `pod install` ;
-- `xcodebuild` Release avec `CODE_SIGNING_ALLOWED=NO` ;
-- empaquetage `Payload/iTalya.app` → `iTalya.ipa` ;
-- publication de l’artefact (90 jours).
+Le workflow : `npm install`, `expo prebuild`, `pod install`, `xcodebuild`
+Release sans signature, empaquetage `Payload/iTalya.app` → `iTalya.ipa`.
 
 ### Mac + Xcode
 
@@ -91,18 +102,19 @@ L’IPA produit est **non signé** : iOS refuse de l’installer tel quel.
 .
 ├── App.js                       # navigation, en-tête, onglets
 ├── src/
-│   ├── api.js                   # player_api.php, catégories, test de flux
-│   ├── storage.js               # réglages + historique (AsyncStorage)
-│   ├── theme.js
-│   ├── utils.js
-│   ├── components.js
+│   ├── api.js                   # Xtream : player_api.php, catégories, flux
+│   ├── stalker.js               # Stalker/Ministra : handshake, profil, catégories
+│   ├── accounts.js              # registre des comptes + portails mémorisés
+│   ├── storage.js               # réglages + historique
+│   ├── theme.js / utils.js / components.js
 │   └── screens/
-│       ├── CheckScreen.js       # vérification d’un compte
+│       ├── CheckScreen.js       # compte Xtream
 │       ├── BulkScreen.js        # lots TXT / M3U
-│       ├── ToolsScreen.js       # nettoyeur, portail, MAC
-│       ├── HistoryScreen.js
+│       ├── StalkerScreen.js     # compte + liste Stalker
+│       ├── AccountsScreen.js    # mes comptes + historique
+│       ├── ToolsScreen.js       # nettoyeur, portail, MAC, doublons
 │       └── SettingsScreen.js
-├── assets/                      # icône 1024 × 1024 + splash
+├── assets/                      # icône ambre 1024 × 1024 + splash
 ├── scripts/generer_assets.py
 └── .github/workflows/ios.yml
 ```
@@ -111,17 +123,23 @@ L’IPA produit est **non signé** : iOS refuse de l’installer tel quel.
 
 ## 5. Différences avec la version bureau
 
-Le cœur Xtream est repris : validation d’URL, `player_api.php`, statuts,
-expiration, connexions, catégories, extraction M3U, dédoublonnage, portails,
-MAC. Ne sont pas encore portés : scan complet d’une catégorie (chaque chaîne,
-film, série), portails Stalker, exports Excel natifs et copie Telegram.
+Portés : validation d’URL, `player_api.php`, statuts, expiration, connexions,
+catégories, extraction M3U, Stalker (handshake/profil/catégories), portails,
+nettoyeur, doublons, MAC, registre et historique.
 
-Les exports se font en TXT/CSV via la feuille de partage iOS (pas de disque
-`résultats`).
+Pas encore portés : scan exhaustif d’une catégorie (chaque chaîne, film, série),
+test de flux Stalker via `create_link`, exports Excel natifs, copie Telegram,
+planification quotidienne, les 75 réglages, les traductions multiples et les
+thèmes clair/sombre.
+
+Les exports passent par la feuille de partage iOS (TXT/CSV), pas par un dossier
+`résultats`.
 
 ## 6. Notes techniques
 
-- `NSAllowsArbitraryLoads` est activé : les serveurs Xtream sont souvent en
-  `http://` sans TLS.
-- Le bundle id est `com.amooott.italya` (aligné sur la release existante).
+- `NSAllowsArbitraryLoads` est activé : Xtream et Stalker sont souvent en
+  `http://`.
+- Stalker utilise toujours `http://` (comme la version bureau) ; les portails
+  HTTPS à certificat invalide ne sont pas contournables avec `fetch` sur iOS.
+- Bundle id `com.amooott.italya`.
 - Timeouts : 5 s connexion / 12 s lecture par défaut, réglables.
