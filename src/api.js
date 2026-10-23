@@ -73,6 +73,30 @@ export function normalizeHost(raw) {
   return `${url.protocol}//${url.host}`;
 }
 
+function decodeComponent(value) {
+  try {
+    return decodeURIComponent(String(value).replace(/\+/g, ' '));
+  } catch {
+    return String(value);
+  }
+}
+
+// Hermes/React Native fournit un URLSearchParams incomplet (get/set non
+// implémentés) : on analyse la chaîne de requête nous-mêmes.
+function parseQuery(search) {
+  const result = {};
+  const clean = String(search || '').replace(/^\?/, '');
+  if (!clean) return result;
+  for (const part of clean.split('&')) {
+    if (!part) continue;
+    const index = part.indexOf('=');
+    const key = decodeComponent(index >= 0 ? part.slice(0, index) : part);
+    const value = index >= 0 ? decodeComponent(part.slice(index + 1)) : '';
+    if (!(key in result)) result[key] = value;
+  }
+  return result;
+}
+
 export function parseM3U(rawUrl) {
   const value = String(rawUrl || '').trim();
   if (!value) throw new ApiError('url_empty', 'Colle une URL M3U.');
@@ -90,8 +114,9 @@ export function parseM3U(rawUrl) {
     throw new ApiError('url_host', 'L’URL ne contient pas de serveur.');
   }
 
-  const username = url.searchParams.get('username');
-  const password = url.searchParams.get('password');
+  const query = parseQuery(url.search);
+  const username = query.username;
+  const password = query.password;
   if (!username || !password) {
     throw new ApiError('url_credentials', 'L’URL doit contenir username= et password=.');
   }
@@ -105,13 +130,17 @@ export function parseM3U(rawUrl) {
 }
 
 export function buildApiUrl(credentials, extra = {}) {
-  const params = new URLSearchParams();
-  params.set('username', credentials.username);
-  params.set('password', credentials.password);
+  const pairs = [
+    ['username', credentials.username],
+    ['password', credentials.password],
+  ];
   Object.entries(extra).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) params.set(key, String(value));
+    if (value !== undefined && value !== null) pairs.push([key, String(value)]);
   });
-  return `${credentials.host}/player_api.php?${params.toString()}`;
+  const query = pairs
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&');
+  return `${credentials.host}/player_api.php?${query}`;
 }
 
 export function isActive(info) {
