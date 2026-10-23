@@ -3,9 +3,29 @@
     "name": "iTalya",
     "slug": "italya",
     "version": "1.0.0",
-    "platforms": ["ios"],
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "italya",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#060A12"
+    },
     "ios": {
-      "bundleIdentifier": "com.amooott.italya"
-    }
+      "supportsTablet": true,
+      "bundleIdentifier": "com.amooott.italya",
+      "buildNumber": "1",
+      "infoPlist": {
+        "CFBundleDisplayName": "iTalya",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
+    },
+    "platforms": ["ios"],
+    "assetBundlePatterns": ["**/*"]
   }
 }
