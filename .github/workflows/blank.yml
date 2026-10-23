@@ -9,6 +9,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Afficher le commit testé
+        run: git log -1 --oneline
+
       - name: Vérifier les fichiers du projet
         run: |
           for f in package.json app.json App.js; do
@@ -25,6 +28,12 @@ jobs:
       - name: Installer les dépendances
         run: npm install
 
+      - name: Vérifier expo et expo-asset
+        run: |
+          node -p "'expo ' + require('expo/package.json').version"
+          ls -d node_modules/expo-asset
+          node -p "'expo-asset ' + require('expo-asset/package.json').version"
+
       - name: Générer le projet iOS
         run: npx expo prebuild --platform ios --clean
 
@@ -35,6 +44,7 @@ jobs:
       - name: Compiler sans signature
         working-directory: ios
         run: |
+          set -o pipefail
           xcodebuild \
             -workspace iTalya.xcworkspace \
             -scheme iTalya \
@@ -44,7 +54,12 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            clean build
+            clean build 2>&1 | tee build.log
+
+      - name: Afficher les erreurs de compilation
+        if: failure()
+        working-directory: ios
+        run: grep -nE "error:|failed" build.log | head -n 80 || true
 
       - name: Créer le fichier IPA
         working-directory: ios/build/Build/Products/Release-iphoneos
